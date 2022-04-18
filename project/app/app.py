@@ -1,6 +1,6 @@
 from dash import Dash, dcc, html, dash_table
 from dash.dependencies import Input, Output, State
-import dash_bootstrap_components as dbc
+from dash.dash_table.Format import Format, Scheme
 from dash.exceptions import PreventUpdate
 import pandas as pd
 import dash
@@ -11,6 +11,11 @@ app = Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 
 MAX_COUNTRIES = 6
+
+# Below function to set all columns as numeric except for the index
+def listofdicts(list_dicts, newdict):
+    list_dicts.append(newdict)
+    return list_dicts
 
 # Download the data and set it up
 df = pd.read_csv("https://raw.githubusercontent.com/finddx/FINDCov19TrackerData/master/processed/data_all.csv")
@@ -148,6 +153,7 @@ def question1_content():
                 {
                     "if": {"column_id": 'time'},
                     "fontWeight": "bold",
+                    #'textAlign':'right',
                 },
             ],
         ),
@@ -205,6 +211,7 @@ def question2_content():
                 {
                     "if": {"column_id": 'time'},
                     "fontWeight": "bold",
+                    #'textAlign':'right',
                 },
             ],
         ),
@@ -257,7 +264,6 @@ def question4_content():
 
 @app.callback(Output('err1', 'children'),
               Output('tbl1', 'data'),
-              Output('tbl1', 'columns'),
               Input('dropdown_country', 'value'),
               Input('dropdown_resample', 'value'),
               Input('dropdown_metric1', 'value'),
@@ -265,21 +271,23 @@ def question4_content():
 def update_table(value, resample, metric):
 
     if len(value) > MAX_COUNTRIES:
-        return 'Limited to {} countries, display will be blocked until {} countr{} {} removed.'.format(MAX_COUNTRIES, len(value)-MAX_COUNTRIES, 'y' if len(value)==MAX_COUNTRIES+1 else 'ies', 'is' if len(value)==MAX_COUNTRIES+1 else 'are'), dash.no_update, dash.no_update
+        return 'Limited to {} countries, display will be blocked until {} countr{} {} removed.'.format(MAX_COUNTRIES, len(value)-MAX_COUNTRIES, 'y' if len(value)==MAX_COUNTRIES+1 else 'ies', 'is' if len(value)==MAX_COUNTRIES+1 else 'are'), dash.no_update
     else:
         if resample == 'Monthly':
             dff = df1m.pivot(index='time', columns='name', values=metric).reset_index()
             dff.time = dff.time.dt.strftime('%B %Y')
             dff = dff.set_index('time')
             dff = dff[value].reset_index()
-            return '', dff.to_dict("records"), [{"name": i, "id": i} for i in dff.columns]
+            dff = dff.rename(columns = {'time':'Timeframe'})
+            return '', dff.to_dict("records")
         elif resample == 'Quarterly':
             dff = df1q.pivot(index='time', columns='name', values=metric).reset_index()
             dff.time = dff.time.dt.to_period(freq='Q')
             dff.time = dff.time.astype(str)
             dff = dff.set_index('time')
             dff = dff[value].reset_index()
-            return '', dff.to_dict("records"), [{"name": i, "id": i} for i in dff.columns]
+            dff = dff.rename(columns = {'time':'Timeframe'})
+            return '', dff.to_dict("records")
 
 @app.callback(Output('err2', 'children'),
               Output('tbl2', 'data'),
@@ -291,21 +299,31 @@ def update_table(value, resample, metric):
 def update_table(value, resample, metric):
 
     if len(value) > MAX_COUNTRIES:
-        return 'Limited to {} countries, display will be blocked until {} countr{} {} removed.'.format(MAX_COUNTRIES, len(value)-MAX_COUNTRIES, 'y' if len(value)==MAX_COUNTRIES+1 else 'ies', 'is' if len(value)==MAX_COUNTRIES+1 else 'are'), dash.no_update
+        return 'Limited to {} countries, display will be blocked until {} countr{} {} removed.'.format(MAX_COUNTRIES, len(value)-MAX_COUNTRIES, 'y' if len(value)==MAX_COUNTRIES+1 else 'ies', 'is' if len(value)==MAX_COUNTRIES+1 else 'are'), dash.no_update, dash.no_update
     else:
         if resample == 'Monthly':
             dff = df2m.pivot(index='time', columns='name', values=metric).reset_index()
             dff.time = dff.time.dt.strftime('%B %Y')
             dff = dff.set_index('time')
             dff = dff[value].reset_index()
-            return '', dff.to_dict("records"), [{"name": i, "id": i} for i in dff.columns]
+            dff = dff.rename(columns = {'time':'Timeframe'})
+            tblcolumns = {'name':'Timeframe','id':'Timeframe', 'type':'text'}
+            listtblcolumns = [tblcolumns]
+            for i in dff.columns[1:]:
+                tblcolumns = listofdicts(listtblcolumns,{'name':i,'id':i,'type':'numeric', 'format':Format(precision=5, scheme=Scheme.exponent)})
+            return '', dff.to_dict("records"), tblcolumns
         elif resample == 'Quarterly':
             dff = df2q.pivot(index='time', columns='name', values=metric).reset_index()
             dff.time = dff.time.dt.to_period(freq='Q')
             dff.time = dff.time.astype(str)
             dff = dff.set_index('time')
             dff = dff[value].reset_index()
-            return '', dff.to_dict("records"), [{"name": i, "id": i} for i in dff.columns]
+            dff = dff.rename(columns = {'time':'Timeframe'})
+            tblcolumns = {'name':'Timeframe','id':'Timeframe', 'type':'text'}
+            listtblcolumns = [tblcolumns]
+            for i in dff.columns[1:]:
+                tblcolumns = listofdicts(listtblcolumns,{'name':i,'id':i,'type':'numeric', 'format':Format(precision=5, scheme=Scheme.exponent)})
+            return '', dff.to_dict("records"), tblcolumns
 
 @app.callback(Output('err4', 'children'),
               Output("boxplots", "figure"),
@@ -320,11 +338,13 @@ def update_graph(value, resample, metric):
     else:
         if resample == 'Monthly':
             dff = df4m[df4m.name.isin(value)][['name','time', metric]]
-            fig = px.box(dff, x=dff.name, y=dff[metric])
+            dff = dff.rename(columns = {'name':'Country'})
+            fig = px.box(dff, x=dff.Country, y=dff[metric])
             return '', fig
         elif resample == 'Quarterly':
             dff = df4q[df4q.name.isin(value)][['name','time', metric]]
-            fig = px.box(dff, x=dff.name, y=dff[metric])
+            dff = dff.rename(columns = {'name':'Country'})
+            fig = px.box(dff, x=dff.Country, y=dff[metric])
             return '', fig
 
 @app.callback(Output('tabs-content-inline', 'children'),
@@ -338,5 +358,6 @@ def render_content(tab):
     elif tab == 'question4':
         return question4_content()
 
+# Test server below
 #if __name__ == '__main__':
 #    app.run_server(debug=True)
