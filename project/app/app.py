@@ -27,7 +27,7 @@ df = df.set_index(['name','time'])
 # Wrangle data for question 1
 # Purposely removed 'cum_tests_orig' as it seems to be calculated from 'new_tests_orig' and is not a separate information
 df1 = df[['new_tests_orig', 'new_cases_orig', 'new_deaths_orig']]
-df1 = df1.rename(columns = {'new_tests_orig':'Tests reports', 'new_cases_orig':'Cases reports', 'new_deaths_orig':'Deaths reports'})
+df1 = df1.rename(columns = {'new_tests_orig':'# of days reporting tests', 'new_cases_orig':'# of days reporting cases', 'new_deaths_orig':'# of days reporting deaths'})
 # Replace zeros with NaN as described in question - keep in mind very early on in the pandemic, the 0 may actually be a report
 df1 = df1.replace(to_replace=0, value=np.nan, inplace=False)
 # Count the number of non NaN values per month/quarter
@@ -118,8 +118,8 @@ def question1_content():
 
         html.Div([
             dcc.Dropdown(
-                ['Tests reports','Cases reports','Deaths reports'],
-                'Tests reports',
+                ['# of days reporting tests','# of days reporting cases','# of days reporting deaths'],
+                '# of days reporting tests',
                 id='dropdown_metric1',
                 clearable=False
             ),
@@ -241,8 +241,8 @@ def question4_content():
 
         html.Div([
             dcc.Dropdown(
-                ['Tests reports','Cases reports','Deaths reports','Mean test rate per 1000 people','Mean case rate per 1000 people','Mean death rate per 1000 people'],
-                'Tests reports',
+                ['# of days reporting tests','# of days reporting cases','# of days reporting deaths','Mean test rate per 1000 people','Mean case rate per 1000 people','Mean death rate per 1000 people'],
+                '# of days reporting tests',
                 id='dropdown_metric4',
                 clearable=False
             ),
