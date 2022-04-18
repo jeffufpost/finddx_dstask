@@ -74,7 +74,7 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             html.Div([
-                html.H3('Jeffrey Post - FINDDX Data Science Task', style = {'margin-bottom': '0px', 'color': 'black'}),
+                html.H3('Jeffrey Post - FIND Data Science Task', style = {'margin-bottom': '0px', 'color': 'black'}),
                 ])
             ], className = "create_container1 five columns", id = "title"),
         ], id = "header", className = "row flex-display", style = {'text-alin': 'center', "margin-bottom": "25px"}),
