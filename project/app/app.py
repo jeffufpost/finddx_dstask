@@ -22,6 +22,7 @@ df = df.set_index(['name','time'])
 # Wrangle data for question 1
 # Purposely removed 'cum_tests_orig' as it seems to be calculated from 'new_tests_orig' and is not a separate information
 df1 = df[['new_tests_orig', 'new_cases_orig', 'new_deaths_orig']]
+df1 = df1.rename(columns = {'new_tests_orig':'Tests reports', 'new_cases_orig':'Cases reports', 'new_deaths_orig':'Deaths reports'})
 # Replace zeros with NaN as described in question - keep in mind very early on in the pandemic, the 0 may actually be a report
 df1 = df1.replace(to_replace=0, value=np.nan, inplace=False)
 # Count the number of non NaN values per month/quarter
@@ -32,6 +33,7 @@ df1m = dfna.groupby(['name', pd.Grouper(freq='M', level=1)]).sum().reset_index()
 
 # Wrangle data for question 2
 df2 = df[['cap_new_tests', 'cap_new_cases', 'cap_new_deaths']]
+df2= df2.rename(columns = {'cap_new_tests':'Mean test rate per 1000 people', 'cap_new_cases':'Mean case rate per 1000 people', 'cap_new_deaths':'Mean death rate per 1000 people'})
 # Here instead we replace NaN with 0s
 df2 = df2.replace(to_replace=np.nan, value=0, inplace=False)
 df2q = df2.groupby(['name', pd.Grouper(freq='Q', level=1)]).mean().reset_index()  #Resample Quarterly
@@ -40,33 +42,29 @@ df2m = df2.groupby(['name', pd.Grouper(freq='M', level=1)]).mean().reset_index()
 # Wrangle data for question 4
 # First quarterly data
 df4q = df1q.copy()
-df4q[['cap_new_tests', 'cap_new_cases', 'cap_new_deaths']] = df2q[['cap_new_tests', 'cap_new_cases', 'cap_new_deaths']]
+df4q[['Mean test rate per 1000 people', 'Mean case rate per 1000 people', 'Mean death rate per 1000 people']] = df2q[['Mean test rate per 1000 people', 'Mean case rate per 1000 people', 'Mean death rate per 1000 people']]
 # Now monthly data
 df4m = df1m.copy()
-df4m[['cap_new_tests', 'cap_new_cases', 'cap_new_deaths']] = df2m[['cap_new_tests', 'cap_new_cases', 'cap_new_deaths']]
+df4m[['Mean test rate per 1000 people', 'Mean case rate per 1000 people', 'Mean death rate per 1000 people']] = df2m[['Mean test rate per 1000 people', 'Mean case rate per 1000 people', 'Mean death rate per 1000 people']]
 
 ### Done with data
 
 tabs_styles = {
     'height': '44px',
-    'align-items': 'center'
+    'align-items':'center',
 }
 tab_style = {
-    'borderTop': '6px solid #d6d6d6',
-    'borderBottom': '6px solid #d6d6d6',
+    'borderBottom': '1px solid #d6d6d6',
     'padding': '6px',
-    'fontWeight': 'bold',
-    'border-radius':'20px',
-    'background-color': '#F2F2F2',
-    'box-shadow': '1px 1px 1px 1px lightgrey',
+    'fontWeight': 'bold'
 }
+
 tab_selected_style = {
-    'borderTop': '6px solid #d6d6d6',
-    'borderBottom': '6px solid #d6d6d6',
+    'borderTop': '1px solid #d6d6d6',
+    'borderBottom': '1px solid #d6d6d6',
     'backgroundColor': '#119DFF',
     'color': 'white',
-    'padding': '6px',
-    'border-radius':'20px'    
+    'padding': '6px'
 }
 
 app.layout = html.Div([
@@ -93,10 +91,14 @@ app.layout = html.Div([
 
 def question1_content():
     return html.Div([
+        
+        html.Div([
+            html.P('Calculate the number of days that each country reported tests, cases and deaths per month or per quarter.', style= {'border':'3px', 'border-style':'solid', 'border-color':'#FF0000', 'padding':'1em'}),
+        ]),
 
         html.Div([
             html.Div([
-                html.P('Select Country', className = 'fix_label', style = {'color': 'black', 'margin-top': '2px', 'display': 'None'}),
+                html.P('Select up to 6 countries', className = 'fix_label', style = {'color': 'black', 'margin-top': '2px'}),
                 dcc.Dropdown(
                     df.reset_index().name.unique(),
                     ['Switzerland'],
@@ -111,38 +113,56 @@ def question1_content():
 
         html.Div([
             dcc.Dropdown(
-                ['new_tests_orig','new_cases_orig','new_deaths_orig'],
-                'new_tests_orig',
+                ['Tests reports','Cases reports','Deaths reports'],
+                'Tests reports',
                 id='dropdown_metric1',
                 clearable=False
             ),
         ], style={'width': '48%', 'display': 'inline-block'}),
 
         html.Div([
-            dcc.Dropdown(
-                ['Monthly', 'Quarterly'],
-                'Monthly',
+# Below is code to have a dropdown menu instead of radoi items
+#            dcc.Dropdown(
+#                ['Monthly', 'Quarterly'],
+#                'Monthly',
+#                id='dropdown_resample',
+#                clearable=False
+#            ),
+            dcc.RadioItems(
+                ['Monthly', 'Quarterly'], 'Monthly',
                 id='dropdown_resample',
-                clearable=False
+                inline=True,
             ),
         ], style={'width': '48%', 'float': 'right', 'display': 'inline-block'}),
 
         dash_table.DataTable(
             id='tbl1',
-            #columns=[{"name": i, "id": i} for i in dfm.columns],
-            data=[]#dfm.to_dict("records")
-            ),
-
-        #dbc.Alert(id='tbl_out'),
-
+            data=[],
+            style_header={
+                'backgroundColor': 'white',
+                'fontWeight': 'bold',
+                'textAlign':'center',
+            },
+            style_cell={'textAlign': 'center'},
+            style_data_conditional=[
+                {
+                    "if": {"column_id": 'time'},
+                    "fontWeight": "bold",
+                },
+            ],
+        ),
     ])
 
 def question2_content():
     return html.Div([
 
         html.Div([
+            html.P('Calculate the monthly and quarterly average testing, case and death rate per capita (per 1000 people) per country.', style= {'border':'3px', 'border-style':'solid', 'border-color':'#FF0000', 'padding':'1em'}),
+        ]),
+
+        html.Div([
             html.Div([
-                html.P('Select Country', className = 'fix_label', style = {'color': 'black', 'margin-top': '2px', 'display': 'None'}),
+                html.P('Select up to 6 countries', className = 'fix_label', style = {'color': 'black', 'margin-top': '2px'}),
                 dcc.Dropdown(
                     df.reset_index().name.unique(),
                     ['Switzerland'],
@@ -157,35 +177,49 @@ def question2_content():
 
         html.Div([
             dcc.Dropdown(
-                ['cap_new_tests', 'cap_new_cases', 'cap_new_deaths'],
-                'cap_new_tests',
+                ['Mean test rate per 1000 people', 'Mean case rate per 1000 people', 'Mean death rate per 1000 people'],
+                'Mean test rate per 1000 people',
                 id='dropdown_metric2',
                 clearable=False
             ),
         ], style={'width': '48%', 'display': 'inline-block'}),
 
         html.Div([
-            dcc.Dropdown(
-                ['Monthly', 'Quarterly'],
-                'Monthly',
+            dcc.RadioItems(
+                ['Monthly', 'Quarterly'], 'Monthly',
                 id='dropdown_resample',
-                clearable=False
+                inline=True,
             ),
         ], style={'width': '48%', 'float': 'right', 'display': 'inline-block'}),
 
         dash_table.DataTable(
             id='tbl2',
             data=[],
-            ),
-
+            style_header={
+                'backgroundColor': 'white',
+                'fontWeight': 'bold',
+                'textAlign':'center',
+            },
+            style_cell={'textAlign': 'center'},
+            style_data_conditional=[
+                {
+                    "if": {"column_id": 'time'},
+                    "fontWeight": "bold",
+                },
+            ],
+        ),
     ])
 
 def question4_content():
     return html.Div([
 
         html.Div([
+            html.P('Create interactive boxplots to show a country on the x axis and any one of the monthly or quarterly metrics calculated in questions 1 and 2.', style= {'border':'3px', 'border-style':'solid', 'border-color':'#FF0000', 'padding':'1em'}),
+        ]),
+
+        html.Div([
             html.Div([
-                html.P('Select Country', className = 'fix_label', style = {'color': 'black', 'margin-top': '2px', 'display': 'None'}),
+                html.P('Select up to 6 countries', className = 'fix_label', style = {'color': 'black', 'margin-top': '2px'}),
                 dcc.Dropdown(
                     df.reset_index().name.unique(),
                     ['Switzerland'],
@@ -200,19 +234,18 @@ def question4_content():
 
         html.Div([
             dcc.Dropdown(
-                ['new_tests_orig','new_cases_orig','new_deaths_orig','cap_new_tests','cap_new_cases','cap_new_deaths'],
-                'cap_new_tests',
+                ['Tests reports','Cases reports','Deaths reports','Mean test rate per 1000 people','Mean case rate per 1000 people','Mean death rate per 1000 people'],
+                'Tests reports',
                 id='dropdown_metric4',
                 clearable=False
             ),
         ], style={'width': '48%', 'display': 'inline-block'}),
 
         html.Div([
-            dcc.Dropdown(
-                ['Monthly', 'Quarterly'],
-                'Monthly',
+            dcc.RadioItems(
+                ['Monthly', 'Quarterly'], 'Monthly',
                 id='dropdown_resample',
-                clearable=False
+                inline=True,
             ),
         ], style={'width': '48%', 'float': 'right', 'display': 'inline-block'}),
 
@@ -250,6 +283,7 @@ def update_table(value, resample, metric):
 
 @app.callback(Output('err2', 'children'),
               Output('tbl2', 'data'),
+              Output('tbl2', 'columns'),
               Input('dropdown_country', 'value'),
               Input('dropdown_resample', 'value'),
               Input('dropdown_metric2', 'value'),
@@ -264,14 +298,14 @@ def update_table(value, resample, metric):
             dff.time = dff.time.dt.strftime('%B %Y')
             dff = dff.set_index('time')
             dff = dff[value].reset_index()
-            return '', dff.to_dict("records")
+            return '', dff.to_dict("records"), [{"name": i, "id": i} for i in dff.columns]
         elif resample == 'Quarterly':
             dff = df2q.pivot(index='time', columns='name', values=metric).reset_index()
             dff.time = dff.time.dt.to_period(freq='Q')
             dff.time = dff.time.astype(str)
             dff = dff.set_index('time')
             dff = dff[value].reset_index()
-            return '', dff.to_dict("records")
+            return '', dff.to_dict("records"), [{"name": i, "id": i} for i in dff.columns]
 
 @app.callback(Output('err4', 'children'),
               Output("boxplots", "figure"),
