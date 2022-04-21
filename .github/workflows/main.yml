@@ -1,6 +1,8 @@
 name: Continuous Integration and Delivery
 
 on: 
+  schedule:
+    - cron: '15 3 * * *' 
   push:
     branches:
       - main
